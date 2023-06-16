@@ -1,17 +1,16 @@
 import torch
 import networks as nets
-from data import generate_recog_data, generate_recog_data_batch
-from plotting import plot_generalization, get_recog_positive_rates
-
+from gen_data import generate_image_recog_data, generate_image_recog_data_batch
 #choose parameters
 netType = 'HebbNet' # HebbFF or LSTM
-d = 150             # input dim
-N = 150             # hidden dim
+d = 25             # input dim
+N = 25             # hidden dim
 force = "Anti"      # ensure either Hebbian or anti-Hebbian plasticity
-trainMode = 'dat'   # train on single dataset or infinite data
-R = 3               # delay interval
+trainMode = 'inf'   # train on single dataset or infinite data
+R = 7               # delay interval
 T = 5000            # length of dataset
 save = True
+img_type = "STATE"
 
 #initialize net
 if netType == 'nnLSTM':
@@ -31,26 +30,20 @@ else:
 
 #train
 if trainMode == 'dat':
-    trainData = generate_recog_data_batch(T=T, d=d, R=R, P=0.5, multiRep=False)
-    validBatch = generate_recog_data(T=T, d=d, R=R, P=0.5, multiRep=False).tensors
+    trainData = generate_image_recog_data_batch(img_type=img_type,T=T, d=d, R=R, P=0.5, multiRep=False)
+    validBatch = generate_image_recog_data(img_type=img_type,T=T, d=d, R=R, P=0.5, multiRep=False).tensors
     net.fit('dataset', epochs=4000, trainData=trainData,
             validBatch=validBatch, earlyStop=False)
 elif trainMode == 'inf':
-    gen_data = lambda: generate_recog_data_batch(T=T, d=d, R=R, P=0.5, multiRep=False)
+    gen_data = lambda: generate_image_recog_data_batch(img_type=img_type, T=T, d=d, R=R, P=0.5, multiRep=False)
     net.fit('infinite', gen_data, iters=4000)
 else:
     raise ValueError
 
 #optional save
 if save:
-    fname = '{}[{},{},1]_{}train={}{}_{}.pkl'.format(
+    fname = '{}[{},{},1]_{}train={}{}_{}_{}.pkl'.format(
                 netType, d, N, 'force{}_'.format(force) if force else '',
-                trainMode, R, 'T={}'.format(T) if trainMode != 'cur' else ''
-                )
+                trainMode, R, 'T={}'.format(T) if trainMode != 'cur' else '',
+                img_type)
     net.save(fname)
-
-#plot generalization
-# gen_data = lambda R: generate_recog_data_batch(T=T, d=d, R=R, P=0.5, multiRep=False)
-# testR, testAcc, truePosRate, falsePosRate = get_recog_positive_rates(net, gen_data)
-# plot_generalization(testR, testAcc, truePosRate, falsePosRate)
-
